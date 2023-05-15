@@ -14,6 +14,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 /**
  * Implements {@link ILogoutRules} for {@link ServerPlayer}.
  */
@@ -30,9 +34,7 @@ public abstract class CLogoutRulesPlayer implements ILogoutRules {
     @Unique
     private boolean executedDisconnect = false;
     @Unique
-    private Runnable delayedTask;
-    @Unique
-    private long taskTime;
+    private final HashMap<Long, Runnable> delayedTasks = new HashMap<>();
 
     @Override
     public boolean al_allowDisconnect() {
@@ -79,9 +81,18 @@ public abstract class CLogoutRulesPlayer implements ILogoutRules {
                 this.executedDisconnect = true;  // Prevent disconnecting twice
             }
             ci.cancel();
-        } else if (this.delayedTask != null && this.taskTime <= System.currentTimeMillis()) {
-            this.delayedTask.run();
-            this.delayedTask = null;
+        } else if (delayedTasks.size() != 0) {
+            // quick and dirty way to avoid ConcurrentModificationException
+            List<Long> toRemove = new ArrayList<>();
+            for (long taskTime : delayedTasks.keySet()) {
+                if (taskTime <= System.currentTimeMillis()) {
+                    delayedTasks.get(taskTime).run();
+                    toRemove.add(taskTime);
+                }
+            }
+            for (long taskTime : toRemove) {
+                delayedTasks.remove(taskTime);
+            }
         }
     }
 
@@ -98,7 +109,6 @@ public abstract class CLogoutRulesPlayer implements ILogoutRules {
 
     @Override
     public void al$delay(long tickDuration, Runnable task) {
-        this.delayedTask = task;
-        this.taskTime = tickDuration;
+        delayedTasks.put(tickDuration, task);
     }
 }

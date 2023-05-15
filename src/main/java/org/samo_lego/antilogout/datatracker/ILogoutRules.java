@@ -5,11 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.ApiStatus;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.samo_lego.antilogout.AntiLogout.config;
 
@@ -53,10 +49,14 @@ public interface ILogoutRules {
     default void al_setInCombatUntil(long systemTime) {
         this.al_setAllowDisconnectAt(systemTime);
 
-        if (config.combatLog.notifyOnCombat) {
+        if (config.combatLog.notifyOnCombat && this.al_allowDisconnect()) {
             // Inform player
             long duration = (long) Math.ceil((systemTime - System.currentTimeMillis()) / 1000.0D);
-            ((ServerPlayer) this).displayClientMessage(this.al$getStartCombatMessage(duration), true);
+            for (int i = 0; i < duration; i += 1) {
+                long remaining = duration - i;
+                long sendAtTime = systemTime - (remaining * 1000L);
+                this.al$delay(sendAtTime, () -> ((ServerPlayer) this).displayClientMessage(this.al$getStartCombatMessage(remaining), true));
+            }
 
             this.al$delay(systemTime, () ->
                     ((ServerPlayer) this).displayClientMessage(this.al$getEndCombatMessage(duration), true));
@@ -65,8 +65,6 @@ public interface ILogoutRules {
 
     /**
      * Schedules a task execution after the specified delay.
-     * Only one can be scheduled at a time.
-     * (Scheduling new task will cancel the previous one)
      *
      * @param at   system time at which the task should be executed
      * @param task task to execute
