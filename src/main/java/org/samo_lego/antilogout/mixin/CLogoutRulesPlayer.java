@@ -14,9 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Implements {@link ILogoutRules} for {@link ServerPlayer}.
@@ -81,17 +79,14 @@ public abstract class CLogoutRulesPlayer implements ILogoutRules {
                 this.executedDisconnect = true;  // Prevent disconnecting twice
             }
             ci.cancel();
-        } else if (delayedTasks.size() != 0) {
-            // quick and dirty way to avoid ConcurrentModificationException
-            List<Long> toRemove = new ArrayList<>();
-            for (long taskTime : delayedTasks.keySet()) {
-                if (taskTime <= System.currentTimeMillis()) {
-                    delayedTasks.get(taskTime).run();
-                    toRemove.add(taskTime);
+        }
+        if (delayedTasks.size() != 0) {
+            for (Iterator<Map.Entry<Long, Runnable>> it = delayedTasks.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<Long, Runnable> entry = it.next();
+                if (entry.getKey() <= System.currentTimeMillis()) {
+                    entry.getValue().run();
+                    it.remove();
                 }
-            }
-            for (long taskTime : toRemove) {
-                delayedTasks.remove(taskTime);
             }
         }
     }
