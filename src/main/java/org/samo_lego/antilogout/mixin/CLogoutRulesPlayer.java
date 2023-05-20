@@ -13,8 +13,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import oshi.util.tuples.Pair;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
+
+import static org.samo_lego.antilogout.AntiLogout.config;
 
 /**
  * Implements {@link ILogoutRules} for {@link ServerPlayer}.
@@ -33,6 +39,8 @@ public abstract class CLogoutRulesPlayer implements ILogoutRules {
     private boolean executedDisconnect = false;
     @Unique
     private final HashMap<Long, Runnable> delayedTasks = new HashMap<>();
+    @Unique
+    private Pair<Long, Integer> nextAlert;
 
     @Override
     public boolean al_allowDisconnect() {
@@ -89,6 +97,18 @@ public abstract class CLogoutRulesPlayer implements ILogoutRules {
                 }
             }
         }
+        if (Objects.nonNull(nextAlert)) {
+            if (nextAlert.getA() <= System.currentTimeMillis()) {
+                int duration = nextAlert.getB();
+                if (nextAlert.getB() != 0) {
+                    ((ServerPlayer) (Object) this).displayClientMessage(this.al$getStartCombatMessage(duration), true);
+                    nextAlert = new Pair<>(System.currentTimeMillis() + 1000, duration - 1);
+                } else {
+                    ((ServerPlayer) (Object) this).displayClientMessage(this.al$getEndCombatMessage(0), true);
+                    nextAlert = null;
+                }
+            }
+        }
     }
 
 
@@ -105,5 +125,13 @@ public abstract class CLogoutRulesPlayer implements ILogoutRules {
     @Override
     public void al$delay(long tickDuration, Runnable task) {
         delayedTasks.put(tickDuration, task);
+    }
+
+    @Override
+    public void al_setInCombatUntil(long systemTime) {
+        this.al_setAllowDisconnectAt(systemTime);
+        if (config.combatLog.notifyOnCombat && !this.al_allowDisconnect()) {
+            nextAlert = new Pair<>(System.currentTimeMillis(), (int) Math.ceil((systemTime - System.currentTimeMillis()) / 1000.0D));
+        }
     }
 }

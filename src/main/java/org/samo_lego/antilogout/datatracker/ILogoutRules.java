@@ -46,22 +46,7 @@ public interface ILogoutRules {
      *
      * @param systemTime time in milliseconds at which the player leaves state.
      */
-    default void al_setInCombatUntil(long systemTime) {
-        this.al_setAllowDisconnectAt(systemTime);
-
-        if (config.combatLog.notifyOnCombat && this.al_allowDisconnect()) {
-            // Inform player
-            long duration = (long) Math.ceil((systemTime - System.currentTimeMillis()) / 1000.0D);
-            for (int i = 0; i < duration; i += 1) {
-                long remaining = duration - i;
-                long sendAtTime = systemTime - (remaining * 1000L);
-                this.al$delay(sendAtTime, () -> ((ServerPlayer) this).displayClientMessage(this.al$getStartCombatMessage(remaining), true));
-            }
-
-            this.al$delay(systemTime, () ->
-                    ((ServerPlayer) this).displayClientMessage(this.al$getEndCombatMessage(duration), true));
-        }
-    }
+    void al_setInCombatUntil(long systemTime);
 
     /**
      * Schedules a task execution after the specified delay.
