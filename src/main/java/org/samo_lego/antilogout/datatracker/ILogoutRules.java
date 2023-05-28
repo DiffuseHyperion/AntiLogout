@@ -64,17 +64,15 @@ public interface ILogoutRules {
      */
     @ApiStatus.Internal
     default Component al$getStartCombatMessage(long duration) {
-        return Component.literal("[AL] ").withStyle(ChatFormatting.DARK_RED).append(
-                Component.translatable(config.combatLog.combatEnterMessage, duration)
-                        .withStyle(ChatFormatting.RED));
+        return Component.translatable(config.combatLog.combatEnterMessage, duration)
+                        .withStyle(ChatFormatting.RED);
     }
 
 
     @ApiStatus.Internal
     default Component al$getEndCombatMessage(long duration) {
-        return Component.literal("[AL] ").withStyle(ChatFormatting.DARK_GREEN).append(
-                Component.translatable(config.combatLog.combatEndMessage, duration)
-                        .withStyle(ChatFormatting.GREEN));
+        return Component.translatable(config.combatLog.combatEndMessage, duration)
+                        .withStyle(ChatFormatting.GREEN);
     }
 
     /**
